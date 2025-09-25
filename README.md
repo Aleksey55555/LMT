@@ -18,3 +18,4 @@
 Также протестированы ансамбли:
 - **LMT-Bagging** (через `BaggingClassifier`)  
 - **LMT-Boosting**
+- **Gradient Boosting (LogitBoost-style) с LMT-листами**
