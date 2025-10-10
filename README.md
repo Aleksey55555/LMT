@@ -10,12 +10,53 @@
 - Random Forest  
 - XGBoost  
 
-В экспериментах рассматривались:
-- Бинарная классификация: **Breast Cancer** (из sklearn.datasets)  
-- Мультиклассовая классификация: **Wine** (из sklearn.datasets)  
-- Синтетический датасет (`make_classification`)  
-
 Также протестированы ансамбли:
 - **LMT-Bagging** (через `BaggingClassifier`)  
 - **LMT-Boosting**
 - **Gradient Boosting (LogitBoost-style) с LMT-листами**
+
+## Основные идеи
+- **Logistic Model Tree (LMT)** — дерево решений, в листьях которого вместо константы обучается логистическая регрессия.
+- LMT c ансамблевыми методами:
+  - **LMT + Bagging (RF-style)** — несколько LMT обучаются на бутстрапированных сэмплах.
+  - **LMT + Boosting (AdaBoost-style)** — последовательное усиление ошибок с помощью LMT.
+  - **LMT-GB (Gradient Boosting)** — деревья делят пространство признаков, в листьях обучаются логистические регрессии (с поддержкой `reuse_ratio` для добавления новых признаков).
+- Реализована поддержка регуляризации (`L1`, `L2`, `elasticnet`) в логистической регрессии на листьях.
+
+## Реализация
+В ноутбуке реализованы:
+- `LogisticModelTreePenalized` — базовый LMT с регуляризацией.
+- `LMTGradientBoostingBinary` и `OneVsRestLMTGB` — градиентный бустинг с логистикой в листьях (OVR для мультикласса).
+- `TreeWithLRLeaves` — дерево, в листьях которого обучаются логистические регрессии, с квотированием признаков (`reuse_ratio`, `topk_frac`).
+- Ансамбли:
+  - `make_rf_style_with_lr_leaves` — Bagging для LMT.
+  - `make_boosting_with_lr_leaves` — Boosting для LMT.
+
+## Датасеты
+Дататсеты, участвующие в эксперименте:
+- `breast_cancer` — диагностика рака груди.
+- `wine` — классификация вин.
+- `digits` — рукописные цифры.
+- `adult income` — предсказание уровня дохода (>50k или <=50k).
+- `synthetic piecewise_logit` — синтетический датасет с кусочно-логистической структурой.
+
+## Результаты (пример)
+### Wine dataset
+| Model                  | Accuracy | Precision | Recall | F1    |
+|-------------------------|----------|-----------|--------|-------|
+| XGBoost                | 1.000    | 1.000     | 1.000  | 1.000 |
+| Random Forest           | 1.000    | 1.000     | 1.000  | 1.000 |
+| Logistic Regression     | 0.981    | 0.982     | 0.981  | 0.981 |
+| SVM (RBF)               | 0.981    | 0.982     | 0.981  | 0.981 |
+| **LMT-GB (OVR, tuned)** | 0.944    | 0.945     | 0.944  | 0.944 |
+
+### Adult dataset
+| Model                  | Accuracy | Precision | Recall | F1    |
+|-------------------------|----------|-----------|--------|-------|
+| XGBoost                | 0.875    | 0.871     | 0.875  | 0.871 |
+| **LMT-GB (Optuna, Adult)** | 0.876 | 0.872     | 0.876  | 0.872 |
+| Random Forest           | 0.857    | 0.851     | 0.857  | 0.852 |
+| Logistic Regression     | 0.856    | 0.849     | 0.856  | 0.850 |
+
+На **Adult Income** LMT-GB показывает результат **сопоставимый с XGBoost и выше RF**, что подтверждает его практическую ценность.
+
